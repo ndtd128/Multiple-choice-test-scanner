@@ -24,7 +24,6 @@ def preprocess(img):
     rectCon = rect_contour(contours)
     imgRectCon = cv2.drawContours(imgRectCon, rectCon, -1, (0, 255, 0)[::-1], 1)
 
-    # Test
     # imgArray = [img, imgGray, imgBlur, imgCanny, imgContours]
     # imgArray = [img, imgContours]
     imgArray = [imgContours, imgRectCon]
@@ -45,7 +44,13 @@ def process(img, gradedAnswerSheets):
     gradedAnswerSheet = GradedAnswerSheet(candidateNumber, testCode, score, resultImage)
     gradedAnswerSheets.append(gradedAnswerSheet)
 
-    # Test
+    # Test 
+    # Cách test xuất CSV: Comment dòng 37-45 và bỏ comment dòng 53-59.
+    # Hai folder reports và results sẽ được tạo ra.
+    # Folder reports chứa folder con có tên của bài kiểm tra. Trong đó chứa CSV report của từng mã đề.
+    # Folder results chứa folder con có tên của bài kiểm tra. Trong đó chứa ảnh chấm điểm bài làm của từng SBD.
+
+    # resultImage = img
     # gradedAnswerSheet1 = GradedAnswerSheet(21020625, 123, 10, resultImage)
     # gradedAnswerSheet2 = GradedAnswerSheet(21020626, 321, 9, resultImage)
     # gradedAnswerSheet3 = GradedAnswerSheet(21020627, 123, 9, resultImage)
