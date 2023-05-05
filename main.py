@@ -1,35 +1,48 @@
 import cv2
-import numpy as np
-from utils import *
+import os
+from process import *
+from GradedAnswerSheet import *
+import csvUtils
 
-#################
-path = "images/mcq.png"
-height = 559
-width = 393
-#################
+# Path to answer sheet images and answer key CSV files
+answerSheetPath = 'answerSheets'
+answerKeyPath = 'answerKeys'
 
-# Preprocessing
-img = cv2.imread(path)
-img = cv2.resize(img, (width, height))
+# Path to result folder (= name of test) (sau nay se lay input nguoi dung)
+# testName = input("Test name: ").trim()
+testName = "midterm"
 
-imgContours = img.copy()
-imgRectCon = img.copy()
-imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
-imgCanny = cv2.Canny(imgBlur, 10, 50)
+# Create result folder if not yet existed
+resultFolder = os.path.join('results', testName)
+if not os.path.exists(resultFolder):
+    os.makedirs(resultFolder)
 
-# Finding all contours
-contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-imgContours = cv2.drawContours(imgContours, contours, -1, (0, 255, 0)[::-1], 1)
+# Push all answer sheet images to a list
+answerSheetsImages = []
+answerSheetFiles = os.listdir(answerSheetPath)
+for filename in answerSheetFiles:
+    img = cv2.imread(os.path.join(answerSheetPath, filename))
+    answerSheetsImages.append(img)
 
-# Find rects
-rectCon = rect_contour(contours)
-imgRectCon = cv2.drawContours(imgRectCon, rectCon, -1, (0, 255, 0)[::-1], 1)
+# Extract answer key for each test code from CSV and push to answerKeys dictionary 
+# answerKeys dictionary format: key = test code, value = list of answer keys for that test code
+answerKeyFiles = os.listdir(answerKeyPath)
+answerKeys = {}
+for answerKeyFilePath in answerKeyFiles:
+    answerKeyFullFilePath = os.path.join(answerKeyPath, answerKeyFilePath)
+    csvUtils.makeAnswerKeyListFromCSV(answerKeyFullFilePath, answerKeys)
 
-# Test
-# imgArray = [img, imgGray, imgBlur, imgCanny, imgContours]
-# imgArray = [img, imgContours]
-imgArray = [imgContours, imgRectCon]
-imgStack = stack_images(1.4, imgArray)
-cv2.imshow("stacked image", imgStack)
-cv2.waitKey(0)
+# List of graded answer sheets
+gradedAnswerSheets = []
+
+# Process each image
+for img in answerSheetsImages:
+    process(img, gradedAnswerSheets)
+
+# Output image files in result folder
+for i in range(len(gradedAnswerSheets)):
+    outputPath = os.path.join(resultFolder, f'{gradedAnswerSheets[i].candidateNumber}.jpg')
+    cv2.imwrite(outputPath, gradedAnswerSheets[i].resultImage)
+
+# Create CSV report
+csvUtils.createCSVReport(gradedAnswerSheets, testName)
