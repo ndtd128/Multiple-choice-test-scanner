@@ -4,9 +4,10 @@ import os
 from utils import *
 from GradedAnswerSheet import *
 import imutils
+from imutils import contours
 
-height = 840
-width = 615
+height = 1021
+width = 937
 
 
 def preprocess(img):
@@ -20,12 +21,12 @@ def preprocess(img):
     imgCanny = cv2.Canny(imgBlur, 20, 50)
 
     # Finding all contours
-    contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    imgContours = cv2.drawContours(imgContours, contours, -1, (0, 255, 0)[::-1], 1)
+    contours1, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    imgContours = cv2.drawContours(imgContours, contours1, -1, (0, 255, 0)[::-1], 1)
 
     # Find rects
-    rectCon = rect_contour(contours)
-    contour1 = get_corner_points(rectCon[7])
+    rectCon = rect_contour(contours1)
+    contour1 = get_corner_points(rectCon[2])
     # contour2 = get_corner_points(rectCon[1])
     # contour3 = get_corner_points(rectCon[2])
     # contour4 = get_corner_points(rectCon[3])
@@ -51,7 +52,7 @@ def preprocess(img):
     # splitBoxes(imgWarpColored)
     thresh = cv2.threshold(imgWarpgray, 0, 255,
                            cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+    cnts = cv2.findContours(thresh.copy(), cv2.RETR_LIST,
                             cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
     questionCnts = []
@@ -63,9 +64,36 @@ def preprocess(img):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if w >= 30 and h >= 30 and h<100 and ar >= 0.7 and ar <= 1.3:
+        if w >= 1 and h >= 1  and ar >= 0.8 and ar <= 1.1:
             questionCnts.append(c)
-        img3 = cv2.drawContours(imgWarpColored, questionCnts, -1, (0, 255, 0)[::-1], 3)
+        cv2.drawContours(imgWarpColored, questionCnts, -1, (0, 255, 0)[::-1], 3)
+
+        # questionCnts = imutils.contours.sort_contours(questionCnts, method="top-to-bottom")[0]
+        # correct = 0
+        # for (q, i) in enumerate(np.arange(0, len(questionCnts), 6)):
+        #     # sort the contours for the current question from
+        #     # left to right, then initialize the index of the
+        #     # bubbled answer
+        #     cnts = imutils.contours.sort_contours(questionCnts[i:i + 5])[0]
+        #     bubbled = None
+        #
+        #     for (j, c) in enumerate(cnts):
+        #         # construct a mask that reveals only the current
+        #         # "bubble" for the question
+        #         mask = np.zeros(thresh.shape, dtype="uint8")
+        #         cv2.drawContours(mask, [c], -1, 255, -1)
+        #
+        #         # apply the mask to the thresholded image, then
+        #         # count the number of non-zero pixels in the
+        #         # bubble area
+        #         mask = cv2.bitwise_and(thresh, thresh, mask=mask)
+        #         total = cv2.countNonZero(mask)
+        #
+        #         # if the current total has a larger number of total
+        #         # non-zero pixels, then we are examining the currently
+        #         # bubbled-in answer
+        #         if bubbled is None or total > bubbled[0]:
+        #             bubbled = (total, j)
 
 
     # imgArray = [img, imgGray, imgBlur, imgCanny, imgContours]
