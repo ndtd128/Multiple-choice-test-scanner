@@ -45,11 +45,13 @@ def process(img, gradedAnswerSheets):
     gradedAnswerSheets.append(gradedAnswerSheet)
 
     # Test 
-    # Cách test xuất CSV: Comment dòng 37-45 và bỏ comment dòng 53-59.
+    # Cách test xuất CSV: 
+    # Comment từ #TODO tới trước #Test, bỏ comment từ #Start CSV Test tới #End CSV Test và chạy file main.py
     # Hai folder reports và results sẽ được tạo ra.
     # Folder reports chứa folder con có tên của bài kiểm tra. Trong đó chứa CSV report của từng mã đề.
     # Folder results chứa folder con có tên của bài kiểm tra. Trong đó chứa ảnh chấm điểm bài làm của từng SBD.
 
+    # Start CSV test
     # resultImage = img
     # gradedAnswerSheet1 = GradedAnswerSheet(21020625, 123, 10, resultImage)
     # gradedAnswerSheet2 = GradedAnswerSheet(21020626, 321, 9, resultImage)
@@ -57,5 +59,6 @@ def process(img, gradedAnswerSheets):
     # gradedAnswerSheets.append(gradedAnswerSheet1)
     # gradedAnswerSheets.append(gradedAnswerSheet2)
     # gradedAnswerSheets.append(gradedAnswerSheet3)
+    # End CSV test
 
     return resultImage
