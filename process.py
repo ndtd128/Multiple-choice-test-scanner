@@ -3,6 +3,7 @@ import numpy as np
 import os
 from utils import *
 from GradedAnswerSheet import *
+from imutils import contours as ct
 import imutils
 
 height = 840
@@ -29,7 +30,6 @@ def preprocess(img):
     # contour2 = get_corner_points(rectCon[1])
     # contour3 = get_corner_points(rectCon[2])
     # contour4 = get_corner_points(rectCon[3])
-
 
     cv2.drawContours(imgSelectedCon, contour1, -1, (0, 255, 0)[::-1], 10)
     # cv2.drawContours(imgSelectedCon, contour2, -1, (0, 0, 255)[::-1], 10)
@@ -63,10 +63,37 @@ def preprocess(img):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if w >= 30 and h >= 30 and h<100 and ar >= 0.7 and ar <= 1.3:
+        if w >= 30 and 30 <= h < 100 and 0.7 <= ar <= 1.3:
             questionCnts.append(c)
-        img3 = cv2.drawContours(imgWarpColored, questionCnts, -1, (0, 255, 0)[::-1], 3)
+        # imgWarpColored = cv2.drawContours(imgWarpColored, questionCnts, -1, (0, 255, 0)[::-1], 3)
 
+    questionCnts = ct.sort_contours(questionCnts,
+                                          method="top-to-bottom")[0]
+    correct = 0
+    # each question has 5 possible answers, to loop over the
+    # question in batches of 5
+    for (q, i) in enumerate(np.arange(0, len(questionCnts), 5)):
+        # sort the contours for the current question from
+        # left to right, then initialize the index of the
+        # bubbled answer
+        cnts = ct.sort_contours(questionCnts[i:i + 5])[0]
+        bubbled = None
+        # loop over the sorted contours
+        for (j, c) in enumerate(cnts):
+            # construct a mask that reveals only the current
+            # "bubble" for the question
+            mask = np.zeros(thresh.shape, dtype="uint8")
+            cv2.drawContours(mask, [c], -1, 255, -1)
+            # apply the mask to the threshold image, then
+            # count the number of non-zero pixels in the
+            # bubble area
+            mask = cv2.bitwise_and(thresh, thresh, mask=mask)
+            total = cv2.countNonZero(mask)
+            # if the current total has a larger number of total
+            # non-zero pixels, then we are examining the currently
+            # bubbled-in answer
+            if bubbled is None or total > bubbled[0]:
+                bubbled = (total, j)
 
     # imgArray = [img, imgGray, imgBlur, imgCanny, imgContours]
     # imgArray = [img, imgContours]

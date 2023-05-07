@@ -57,15 +57,16 @@ def rect_contour(contours):
         if area > 1000:
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
-            #print("Area", area, ", Corner points", len(approx))
+            # print("Area", area, ", Corner points", len(approx))
 
-            if len(approx) ==4 :
+            if len(approx) == 4:
                 rectCon.append(contour)
 
     # sort descending rectangle contours by area
     rectCon = sorted(rectCon, key=cv2.contourArea, reverse=True)
 
     return rectCon
+
 
 def get_corner_points(contour):
     # contour.get
@@ -75,21 +76,20 @@ def get_corner_points(contour):
     return approx
 
 
-
 def reorder(myPoints):
-    myPoints = myPoints.reshape((4,2))
-    myPointNew= np.zeros((4,1,2),np.int32)
+    myPoints = myPoints.reshape((4, 2))
+    myPointNew = np.zeros((4, 1, 2), np.int32)
     add = myPoints.sum(1)
     # print(myPoints)
     # print(add)
-    myPointNew[0]  = myPoints[np.argmin(add)] # [0,0]
-    myPointNew[3] = myPoints[np.argmax(add)]   #[w,h]
-    diff = np.diff(myPoints,axis=1)
+    myPointNew[0] = myPoints[np.argmin(add)]  # [0,0]
+    myPointNew[3] = myPoints[np.argmax(add)]  # [w,h]
+    diff = np.diff(myPoints, axis=1)
     myPointNew[1] = myPoints[np.argmin(diff)]  # [w,0]
     myPointNew[2] = myPoints[np.argmax(diff)]  # [h,0]
 
-
     return myPointNew
+
 
 def numberDetection(img):
     imgContours = img.copy()
@@ -104,14 +104,14 @@ def numberDetection(img):
 
     # Perform dilation on the image
     dilated = cv2.dilate(imgCanny, kernel, iterations=1)
-    cv2.imshow("A",dilated)
+    cv2.imshow("A", dilated)
+
 
 def splitBoxes(img):
-    a =1
+    a = 1
     # row = np.vsplit(img,6)
     # col =np.hsplit(row[4],5)
     # cv2.imshow("im1", row[1])
     # cv2.imshow("im2", col[2])
     # cv2.imshow("im3", col[3])
     # cv2.imshow("im4", col[4])
-
