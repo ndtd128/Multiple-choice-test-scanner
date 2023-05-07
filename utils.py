@@ -68,12 +68,8 @@ def rect_contour(contours):
                 if check:
                     rectCon.append(contour)
 
-    print(len(rectCon))
-
     # sort descending rectangle contours by area
     rectCon = sorted(rectCon, key=cv2.contourArea, reverse=True)
-
-
     return rectCon
 
 

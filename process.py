@@ -22,14 +22,15 @@ def preprocess(img):
 
     # Finding all contours
     contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    for cnt in contours:
-        imgContours = cv2.drawContours(imgContours, cnt, -1, (0, 255, 0)[::-1], 1)
 
+    imgContours = cv2.drawContours(imgContours, contours, -1, (0, 255, 0)[::-1], 1)
+
+    getCandNum(img)
     # Find rects
     rectCon = rect_contour(contours)
     # for cnt in rectCon:
     color = list(np.random.random(size=3) * 256)
-    imgRectCon = cv2.drawContours(imgRectCon, rectCon, -1, color, 10)
+    imgRectCon = cv2.drawContours(imgRectCon, rectCon[3], -1, color, 10)
     contour1 = get_corner_points(rectCon[0])
 
     imgArray = [imgContours, imgRectCon]
@@ -38,8 +39,7 @@ def preprocess(img):
     cv2.waitKey(0)
 
 
-def getCandNum(img, contour1):
-    img = cv2.resize(img, (width, height))
+def getCandNum(img):
 
     imgContours = img.copy()
     imgRectCon = img.copy()
@@ -54,7 +54,7 @@ def getCandNum(img, contour1):
 
     # Find rects
     rectCon = rect_contour(contours)
-    contour1 = get_corner_points(rectCon[0])
+    contour1 = get_corner_points(rectCon[3])
     # contour2 = get_corner_points(rectCon[1])
     # contour3 = get_corner_points(rectCon[2])
     # contour4 = get_corner_points(rectCon[3])
