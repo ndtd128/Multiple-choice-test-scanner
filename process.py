@@ -40,12 +40,11 @@ def getAnswerList(answerArea):
                     questionCnts.append(c)
                     
         questionCnts = imutils.contours.sort_contours(questionCnts, method="top-to-bottom")[0]
-        correct = 0
 
         for (q, i) in enumerate(np.arange(0, len(questionCnts), 4)):
             cnts = contours.sort_contours(questionCnts[i:i + 4])[0]
             bubbled = None
-            
+            filledThreshold = 400
             for j, c in enumerate(cnts):
                 # construct a mask that reveals only the current
                 # "bubble" for the question
@@ -65,7 +64,7 @@ def getAnswerList(answerArea):
                 if bubbled is None or total > bubbled[0]:
                     bubbled = (total, j)
             
-            if bubbled is None:
+            if bubbled[0] < filledThreshold:
                 answerList.append(-1)
             else:
                 answerList.append(bubbled[1])
@@ -192,9 +191,9 @@ def calculateGrade(answerList, answerKeys, testCode):
     correctAnswerList = []
     wrongAnswerList = []
     for index, key in enumerate(answerKeys[testCode]):
-        if answerList[index] == -1:
-            continue
-        elif answerList[index] == key:
+        # if answerList[index] == -1:
+        #     wrongAnswerList.append(index)
+        if answerList[index] == key:
             correctAnswerList.append(index)
         else:
             wrongAnswerList.append(index)
@@ -239,6 +238,7 @@ def process(img, answerKeys, gradedAnswerSheets):
     print("Candidate number: " + candidateNumber)
     print("Test code: " + testCode)
     print("Grade: " + str(grade))
+    print("Answer list: ", answerList)
 
     # TODO: Create result image (ban Hung lam nhe)
     resultImage = img
