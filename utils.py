@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-
+SIMILAR_RATE = 0.002
 def stack_images(scale, img_array):
     rows = len(img_array)
     cols = len(img_array[0])
@@ -57,13 +57,22 @@ def rect_contour(contours):
         if area > 1000:
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
-            # print("Area", area, ", Corner points", len(approx))
 
             if len(approx) == 4:
-                rectCon.append(contour)
+                check = True
+                for cnt in rectCon:
+                    rate = cv2.matchShapes(contour, cnt, cv2.CONTOURS_MATCH_I1, 0.0)
+                    if rate < 0.05:
+                        check = False
+                        break
+                if check:
+                    rectCon.append(contour)
+
+    print(len(rectCon))
 
     # sort descending rectangle contours by area
     rectCon = sorted(rectCon, key=cv2.contourArea, reverse=True)
+
 
     return rectCon
 

@@ -22,11 +22,39 @@ def preprocess(img):
 
     # Finding all contours
     contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    for cnt in contours:
+        imgContours = cv2.drawContours(imgContours, cnt, -1, (0, 255, 0)[::-1], 1)
+
+    # Find rects
+    rectCon = rect_contour(contours)
+    # for cnt in rectCon:
+    color = list(np.random.random(size=3) * 256)
+    imgRectCon = cv2.drawContours(imgRectCon, rectCon, -1, color, 10)
+    contour1 = get_corner_points(rectCon[0])
+
+    imgArray = [imgContours, imgRectCon]
+    imgStack = stack_images(1, imgArray)
+    cv2.imshow("stacked image", imgStack)
+    cv2.waitKey(0)
+
+
+def getCandNum(img, contour1):
+    img = cv2.resize(img, (width, height))
+
+    imgContours = img.copy()
+    imgRectCon = img.copy()
+    imgSelectedCon = img.copy()
+    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
+    imgCanny = cv2.Canny(imgBlur, 20, 50)
+
+    # Finding all contours
+    contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     imgContours = cv2.drawContours(imgContours, contours, -1, (0, 255, 0)[::-1], 1)
 
     # Find rects
     rectCon = rect_contour(contours)
-    contour1 = get_corner_points(rectCon[7])
+    contour1 = get_corner_points(rectCon[0])
     # contour2 = get_corner_points(rectCon[1])
     # contour3 = get_corner_points(rectCon[2])
     # contour4 = get_corner_points(rectCon[3])
@@ -68,20 +96,21 @@ def preprocess(img):
         # imgWarpColored = cv2.drawContours(imgWarpColored, questionCnts, -1, (0, 255, 0)[::-1], 3)
 
     questionCnts = ct.sort_contours(questionCnts,
-                                          method="top-to-bottom")[0]
-    correct = 0
+                                    method="left-to-right")[0]
     # each question has 5 possible answers, to loop over the
     # question in batches of 5
-    for (q, i) in enumerate(np.arange(0, len(questionCnts), 5)):
+    cand_num = ''
+    for (q, i) in enumerate(np.arange(0, len(questionCnts), 10)):
         # sort the contours for the current question from
         # left to right, then initialize the index of the
         # bubbled answer
-        cnts = ct.sort_contours(questionCnts[i:i + 5])[0]
+        cnts = ct.sort_contours(questionCnts[i:i + 10], method="top-to-bottom")[0]
         bubbled = None
         # loop over the sorted contours
         for (j, c) in enumerate(cnts):
             # construct a mask that reveals only the current
             # "bubble" for the question
+
             mask = np.zeros(thresh.shape, dtype="uint8")
             cv2.drawContours(mask, [c], -1, 255, -1)
             # apply the mask to the threshold image, then
@@ -95,13 +124,12 @@ def preprocess(img):
             if bubbled is None or total > bubbled[0]:
                 bubbled = (total, j)
 
-    # imgArray = [img, imgGray, imgBlur, imgCanny, imgContours]
-    # imgArray = [img, imgContours]
-    imgArray = [imgContours, imgSelectedCon, imgWarpColored]
-    imgStack = stack_images(0.5, imgArray)
-    cv2.imshow("stacked image", imgStack)
-    cv2.waitKey(0)
-
+        color_ans = list(np.random.random(size=3) * 256)
+        # cv2.drawContours(imgWarpColored, cnts, -1, color, thickness=3)
+        cv2.drawContours(imgWarpColored, cnts[bubbled[1]], -1, color_ans, thickness=5)
+        cand_num += str(bubbled[1])
+    print(cand_num)
+    return
 
 def process(img, gradedAnswerSheets):
     preprocess(img)

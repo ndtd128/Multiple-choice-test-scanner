@@ -1,4 +1,5 @@
 import cv2
+
 import os
 from process import *
 from GradedAnswerSheet import *
@@ -11,6 +12,7 @@ answerKeyPath = 'answerKeys'
 # Path to result folder (= name of test) (sau nay se lay input nguoi dung)
 # testName = input("Test name: ").trim()
 testName = "midterm"
+
 
 # Create result folder if not yet existed
 resultFolder = os.path.join('results', testName)
