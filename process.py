@@ -45,6 +45,7 @@ def getAnswerList(answerArea):
             cnts = contours.sort_contours(questionCnts[i:i + 4])[0]
             bubbled = None
             filledThreshold = 400
+            numOfBubbled = 0
             for j, c in enumerate(cnts):
                 # construct a mask that reveals only the current
                 # "bubble" for the question
@@ -63,8 +64,10 @@ def getAnswerList(answerArea):
                 # bubbled-in answer
                 if bubbled is None or total > bubbled[0]:
                     bubbled = (total, j)
-            
-            if bubbled[0] < filledThreshold:
+                if total > filledThreshold:
+                    numOfBubbled += 1
+            print(numOfBubbled)
+            if bubbled[0] < filledThreshold or numOfBubbled > 1:
                 answerList.append(-1)
             else:
                 answerList.append(bubbled[1])
