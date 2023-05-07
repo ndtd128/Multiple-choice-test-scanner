@@ -37,7 +37,7 @@ gradedAnswerSheets = []
 
 # Process each image
 for img in answerSheetsImages:
-    process(img, gradedAnswerSheets)
+    process(img, answerKeys, gradedAnswerSheets)
 
 # Output image files in result folder
 for i in range(len(gradedAnswerSheets)):

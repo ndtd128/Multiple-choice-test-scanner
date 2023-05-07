@@ -14,7 +14,7 @@ def makeAnswerKeyListFromCSV(csvFilePath, answerKeys):
 
             elif row[0].isdigit() and len(row[1]) == 1:
                 # Map answer key to int
-                key = ord(row[1]) - 64
+                key = ord(row[1]) - 65
                 answerKeys[testCode].append(key)
 
 def createCSVReport(gradedAnswerSheets, testName):

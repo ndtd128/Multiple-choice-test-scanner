@@ -1,11 +1,14 @@
 import cv2
 import numpy as np
+import math
+from constants import *
+import imutils
+from imutils.perspective import four_point_transform
 
-
-def stack_images(scale, img_array):
+def stackImages(scale, img_array):
     rows = len(img_array)
     cols = len(img_array[0])
-    rowsAvailable = isinstance(img_array[0], list)
+    rowsAvailable = isinstance(img_array[0], list)  
     width = img_array[0][0].shape[1]
     height = img_array[0][0].shape[0]
 
@@ -46,36 +49,35 @@ def stack_images(scale, img_array):
     return ver
 
 
-def rect_contour(contours):
+def rectContour(contours):
     rectCon = []
 
     for contour in contours:
         area = cv2.contourArea(contour)
-        # print("Area ", area)
-
-        # Filter by area
         if area > 1000:
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
-            #print("Area", area, ", Corner points", len(approx))
 
-            if len(approx) ==4 :
+            if len(approx) == 4:
                 rectCon.append(contour)
 
-    # sort descending rectangle contours by area
+    # Sort descending rectangle contours by area
     rectCon = sorted(rectCon, key=cv2.contourArea, reverse=True)
 
-    return rectCon
+    uniqueRectCon = []
+    uniqueRectCon.append(rectCon[0])
+    for i in range(1, len(rectCon)):
+        if cv2.contourArea(rectCon[i]) / cv2.contourArea(rectCon[i - 1]) > 1.05 or cv2.contourArea(rectCon[i]) / cv2.contourArea(rectCon[i - 1]) < 0.95:
+            uniqueRectCon.append(rectCon[i])
 
-def get_corner_points(contour):
-    # contour.get
+    return uniqueRectCon
 
+def getCornerPoints(contour):
     peri = cv2.arcLength(contour, True)
     approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
     return approx
 
-
-
+# Deprecated
 def reorder(myPoints):
     myPoints = myPoints.reshape((4,2))
     myPointNew= np.zeros((4,1,2),np.int32)
@@ -87,10 +89,9 @@ def reorder(myPoints):
     diff = np.diff(myPoints,axis=1)
     myPointNew[1] = myPoints[np.argmin(diff)]  # [w,0]
     myPointNew[2] = myPoints[np.argmax(diff)]  # [h,0]
-
-
     return myPointNew
 
+# Deprecated
 def numberDetection(img):
     imgContours = img.copy()
     imgGray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -106,12 +107,66 @@ def numberDetection(img):
     dilated = cv2.dilate(imgCanny, kernel, iterations=1)
     cv2.imshow("A",dilated)
 
-def splitBoxes(img):
-    a =1
-    # row = np.vsplit(img,6)
-    # col =np.hsplit(row[4],5)
-    # cv2.imshow("im1", row[1])
-    # cv2.imshow("im2", col[2])
-    # cv2.imshow("im3", col[3])
-    # cv2.imshow("im4", col[4])
+def extractAnswerColumns(answerRegion):
+    # Load the image
+    image = answerRegion.copy()
 
+    # Define the coordinates of the ROI (x, y, width, height)
+    w = math.ceil(image.shape[1] * 0.78)
+    h = math.ceil(image.shape[0] * 0.85)
+    x = round((image.shape[1] - w) / 2)-10
+    y = round((image.shape[0] - h) / 2)
+
+    # Crop the image based on the ROI coordinates
+    roi = image[y:y+h, x:x+w-15]
+    roi_resized = cv2.resize(roi, (0,0), fx=0.8, fy=0.8)
+
+    # Calculate the width of each column
+    column_width = math.ceil(w / 3)
+
+    # Define the width to be cropped from each column
+    crop_width = math.ceil(column_width / 6)
+
+    # Extract column 1 and crop the first 1/6 width
+    column1 = roi[:, :column_width]
+    column1_cropped = column1[:, crop_width:]
+
+    # Extract column 2 and crop the first 1/6 width
+    column2 = roi[:, column_width:2*column_width]
+    column2_cropped = column2[:, crop_width:]
+
+    # Extract column 3 and crop the first 1/6 width
+    column3 = roi[:, 2*column_width:]
+    column3_cropped = column3[:, crop_width:]
+
+    croppedColumns = [column1_cropped, column2_cropped, column3_cropped]
+    return croppedColumns
+
+def getAnswerSheetInfo(answerSheetImage):
+    image = answerSheetImage
+    # Crop "info" region
+    info = image[INFO_Y:INFO_Y+INFO_H, INFO_X:INFO_X+INFO_W]
+
+    # Crop "score" region
+    score = image[SCORE_Y:SCORE_Y+SCORE_H, SCORE_X:SCORE_X+SCORE_W]
+
+    answerSheetInfo = {}
+
+    imgGray = cv2.cvtColor(info, cv2.COLOR_BGR2GRAY)
+    imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
+    imgCanny = cv2.Canny(imgBlur, 20, 50)
+
+    contours1, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    rectCon = rectContour(contours1)
+
+    candNumberCorners = getCornerPoints(rectCon[0])
+    candNumberArea = four_point_transform(info, candNumberCorners.reshape(4, 2))
+
+    testCodeCorners = getCornerPoints(rectCon[1])
+    testCodeArea = four_point_transform(info, testCodeCorners.reshape(4, 2))
+
+    answerSheetInfo["infoImage"] = info
+    answerSheetInfo["candidateNumber"] = candNumberArea
+    answerSheetInfo["testCode"] = testCodeArea
+
+    return answerSheetInfo
