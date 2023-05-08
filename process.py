@@ -16,29 +16,7 @@ def getAnswerList(answerArea):
     answerList = []
     answerColumns = extractAnswerColumns(thresh)
     for columnIndex, column in enumerate(answerColumns):
-        cnts = cv2.findContours(column, cv2.RETR_LIST,
-                                cv2.CHAIN_APPROX_SIMPLE)
-        cnts = imutils.grab_contours(cnts)
-        questionCnts = []
-        for c in cnts:
-            (x, y, w, h) = cv2.boundingRect(c)
-            ar = w / float(h)
-
-            if w >= 20 and h >= 20  and ar >= 0.7 and ar <= 1.3:
-                # Check if the contour overlaps with any existing contour
-                is_overlapping = False
-                (curr_x, curr_y), curr_radius = cv2.minEnclosingCircle(c)
-                for existingCnt in questionCnts:
-                    (existing_x, existing_y), existing_radius = cv2.minEnclosingCircle(existingCnt)
-                    distance = np.sqrt((existing_x - curr_x)**2 + (existing_y - curr_y)**2)
-                    if distance < (existing_radius + curr_radius):
-                        is_overlapping = True
-                        break
-
-                # If the contour is not overlapping with any existing contour, add it to questionCnts
-                if not is_overlapping:
-                    questionCnts.append(c)
-                    
+        questionCnts = getBubbles(column)
         questionCnts = imutils.contours.sort_contours(questionCnts, method="top-to-bottom")[0]
 
         for (q, i) in enumerate(np.arange(0, len(questionCnts), 4)):
@@ -79,10 +57,7 @@ def getTestCode(answerSheetImage):
     # Threshold
     imgWarpgray = cv2.cvtColor(testCodeArea, cv2.COLOR_BGR2GRAY)
 
-    thresh = cv2.threshold(imgWarpgray, 0, 255,
-                           cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-    # cv2.imshow("Test code", thresh)
-    # cv2.waitKey(0)
+    thresh = cv2.threshold(imgWarpgray, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
     threshH, threshW = thresh.shape[:2]
     crop_width = int(0.25 * threshW)
     crop_height = int(0.1 * threshH)
@@ -90,25 +65,7 @@ def getTestCode(answerSheetImage):
     cropped_thresh = thresh[crop_height:, crop_width:]
 
     testCode = ""
-    cnts = cv2.findContours(cropped_thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    questionCnts = []
-    for c in cnts:
-        (x, y, w, h) = cv2.boundingRect(c)
-        ar = w / float(h)
-
-        if w >= 20 and h >= 20  and ar >= 0.7 and ar <= 1.3:
-            is_overlapping = False
-            (curr_x, curr_y), curr_radius = cv2.minEnclosingCircle(c)
-            for existingCnt in questionCnts:
-                (existing_x, existing_y), existing_radius = cv2.minEnclosingCircle(existingCnt)
-                distance = np.sqrt((existing_x - curr_x)**2 + (existing_y - curr_y)**2)
-                if distance < (existing_radius + curr_radius):
-                    is_overlapping = True
-                    break
-
-            if not is_overlapping:
-                questionCnts.append(c)
+    questionCnts = getBubbles(cropped_thresh)
     cv2.drawContours(cropped_thresh, questionCnts, -1, (0, 255, 0)[::-1], 10)
 
     questionCnts = imutils.contours.sort_contours(questionCnts, method="left-to-right")[0]
@@ -142,37 +99,14 @@ def getCandidateNumber(answerSheetImage):
     candidateNumberArea= answerSheetInfo["candidateNumber"]
     imgWarpgray = cv2.cvtColor(candidateNumberArea, cv2.COLOR_BGR2GRAY)
 
-    thresh = cv2.threshold(imgWarpgray, 0, 255,
-                           cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-    
+    thresh = cv2.threshold(imgWarpgray, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
     threshH, threshW = thresh.shape[:2]
     crop_width = int(0.825 * threshW)
     crop_height = int(0.1 * threshH)
-
     cropped_thresh = thresh[crop_height:threshH-crop_height, threshW - crop_width:]
 
     candidateNumber = ""
-    cnts = cv2.findContours(cropped_thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    questionCnts = []
-    for c in cnts:
-        (x, y, w, h) = cv2.boundingRect(c)
-        ar = w / float(h)
-
-        if w >= 20 and h >= 20  and ar >= 0.7 and ar <= 1.3:
-            # Check if the contour overlaps with any existing contour
-            is_overlapping = False
-            (curr_x, curr_y), curr_radius = cv2.minEnclosingCircle(c)
-            for existingCnt in questionCnts:
-                (existing_x, existing_y), existing_radius = cv2.minEnclosingCircle(existingCnt)
-                distance = np.sqrt((existing_x - curr_x)**2 + (existing_y - curr_y)**2)
-                if distance < (existing_radius + curr_radius):
-                    is_overlapping = True
-                    break
-
-            # If the contour is not overlapping with any existing contour, add it to questionCnts
-            if not is_overlapping:
-                questionCnts.append(c)
+    questionCnts = getBubbles(cropped_thresh)
     cv2.drawContours(cropped_thresh, questionCnts, -1, (0, 255, 0)[::-1], 10)
     questionCnts = imutils.contours.sort_contours(questionCnts, method="left-to-right")[0]
 
@@ -259,7 +193,7 @@ def getResult(answerArea, answerKeys, testCode, answerList, grade ,img):
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         top_left = max_loc
         location_info.append([top_left[1], top_left[1] + h, top_left[0], top_left[0] + w])
-        print(location_info[columnIndex])
+        # print(location_info[columnIndex])
 
     imgWarpgray = cv2.cvtColor(answerArea, cv2.COLOR_BGR2GRAY)
 
@@ -336,12 +270,9 @@ def process(img, answerKeys, gradedAnswerSheets):
     print("Grade: " + str(grade))
     print("Answer list: ", answerList)
 
-    # TODO: Create result image (ban Hung lam nhe)
-    resultImage = img
+    resultImage = getResult(answerArea, answerKeys, testCode, answerList, grade, img.copy())
 
     # Create new object of class GradedAnswerSheet having the above info
     gradedAnswerSheet = GradedAnswerSheet(candidateNumber, testCode, grade, resultImage, answerList, wrongAnswerList, correctAnswerList)
     gradedAnswerSheets.append(gradedAnswerSheet)
-    getResult(answerArea, answerKeys, testCode, answerList, grade, img)
-
-    return resultImage
+    

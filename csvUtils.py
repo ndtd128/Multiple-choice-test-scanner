@@ -1,6 +1,7 @@
 import csv
 import os
 from GradedAnswerSheet import *
+import statistics
 
 def makeAnswerKeyListFromCSV(csvFilePath, answerKeys):
     with open(csvFilePath, 'r') as file:
@@ -16,6 +17,8 @@ def makeAnswerKeyListFromCSV(csvFilePath, answerKeys):
                 # Map answer key to int
                 key = ord(row[1]) - 65
                 answerKeys[testCode].append(key)
+
+import statistics
 
 def createCSVReport(gradedAnswerSheets, testName):
     testResults = {}
@@ -40,3 +43,34 @@ def createCSVReport(gradedAnswerSheets, testName):
             writer.writerow(['Candidate number', 'Score'])
             for result in results:
                 writer.writerow(result)
+            
+            writer.writerow([])  # Blank line
+            
+            # Calculate additional metrics
+            scores = [result[1] for result in results]
+            averageScore = sum(scores) / len(scores)
+            medianScore = statistics.median(scores)
+            modeScore = statistics.mode(scores)
+            lowestGrade = min(scores)
+            highestGrade = max(scores)
+            
+            # Calculate grade distribution
+            gradeDistribution = []
+            totalStudents = len(scores)
+            for i in range(10):
+                gradeRange = f"{i}-{i + 1}"
+                count = sum(i <= score < i + 1 for score in scores)
+                percentage = count / totalStudents * 100
+                gradeDistribution.append(f"{count} ({percentage:.2f}%)")
+            
+            # Write additional fields to the CSV
+            writer.writerow(['ANALYTICS'])
+            writer.writerow(['Average Score', averageScore])
+            writer.writerow(['Median Score', medianScore])
+            writer.writerow(['Mode Score', modeScore])
+            writer.writerow(['Lowest Grade', lowestGrade])
+            writer.writerow(['Highest Grade', highestGrade])
+            writer.writerow(['Grade Ranges'] + [f"{str(i)}->{str(i + 1)}" for i in range(10)])
+            writer.writerow(['Grade Distribution'] + gradeDistribution)
+
+

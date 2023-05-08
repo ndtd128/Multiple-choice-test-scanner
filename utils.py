@@ -170,3 +170,25 @@ def getAnswerSheetInfo(answerSheetImage):
     answerSheetInfo["testCode"] = testCodeArea
 
     return answerSheetInfo
+
+def getBubbles(thresholdedImage):
+    cnts = cv2.findContours(thresholdedImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+    questionCnts = []
+    for c in cnts:
+        (x, y, w, h) = cv2.boundingRect(c)
+        ar = w / float(h)
+
+        if w >= 20 and h >= 20  and ar >= 0.7 and ar <= 1.3:
+            is_overlapping = False
+            (curr_x, curr_y), curr_radius = cv2.minEnclosingCircle(c)
+            for existingCnt in questionCnts:
+                (existing_x, existing_y), existing_radius = cv2.minEnclosingCircle(existingCnt)
+                distance = np.sqrt((existing_x - curr_x)**2 + (existing_y - curr_y)**2)
+                if distance < (existing_radius + curr_radius):
+                    is_overlapping = True
+                    break
+
+            if not is_overlapping:
+                questionCnts.append(c)
+    return questionCnts
