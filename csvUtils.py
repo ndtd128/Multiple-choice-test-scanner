@@ -19,10 +19,10 @@ def makeAnswerKeyListFromCSV(csvFilePath, answerKeys):
 
 def createCSVReport(gradedAnswerSheets, testName):
     testResults = {}
-    for sheet in gradedAnswerSheets:
-        if sheet.testCode not in testResults:
+    for index, sheet in enumerate(gradedAnswerSheets):
+        if sheet.testCode != "N/A" and sheet.testCode not in testResults:
             testResults[sheet.testCode] = []
-        testResults[sheet.testCode].append((sheet.candidateNumber, sheet.score))
+            testResults[sheet.testCode].append((sheet.candidateNumber, sheet.score))
 
     reportsFolder = "reports"
     testFolderPath = os.path.join(reportsFolder, testName)
@@ -32,6 +32,7 @@ def createCSVReport(gradedAnswerSheets, testName):
     for testCode, results in testResults.items():
         reportFilename = f"test_report_{testCode}.csv"
         reportFilePath = os.path.join(testFolderPath, reportFilename)
+        print(reportFilePath)
         with open(reportFilePath, 'w', newline='') as reportFile:
             writer = csv.writer(reportFile)
             writer.writerow(['TEST REPORT'])

@@ -44,7 +44,6 @@ def getAnswerList(answerArea):
         for (q, i) in enumerate(np.arange(0, len(questionCnts), 4)):
             cnts = contours.sort_contours(questionCnts[i:i + 4])[0]
             bubbled = None
-            filledThreshold = 400
             numOfBubbled = 0
             for j, c in enumerate(cnts):
                 # construct a mask that reveals only the current
@@ -64,10 +63,9 @@ def getAnswerList(answerArea):
                 # bubbled-in answer
                 if bubbled is None or total > bubbled[0]:
                     bubbled = (total, j)
-                if total > filledThreshold:
+                if total > FILLED_THRESHOLD:
                     numOfBubbled += 1
-            print(numOfBubbled)
-            if bubbled[0] < filledThreshold or numOfBubbled > 1:
+            if bubbled[0] < FILLED_THRESHOLD or numOfBubbled > 1:
                 answerList.append(-1)
             else:
                 answerList.append(bubbled[1])
@@ -119,7 +117,7 @@ def getTestCode(answerSheetImage):
 
         cnts = contours.sort_contours(questionCnts[i:i + 10], method="top-to-bottom")[0]
         bubbled = None
-        
+        numOfBubbled = 0
         for j, c in enumerate(cnts):
             mask = np.zeros(cropped_thresh.shape, dtype="uint8")
             cv2.drawContours(mask, [c], -1, 255, -1)
@@ -130,8 +128,13 @@ def getTestCode(answerSheetImage):
 
             if bubbled is None or total > bubbled[0]:
                 bubbled = (total, j)
-        testCode += str(bubbled[1])
-
+            if total > FILLED_THRESHOLD_2:
+                numOfBubbled += 1
+        if bubbled[0] < FILLED_THRESHOLD_2 or numOfBubbled > 1:
+            print("INVALID TEST CODE FILLED")
+            return None
+        else:
+            testCode += str(bubbled[1])
     return testCode
 
 def getCandidateNumber(answerSheetImage):
@@ -177,7 +180,7 @@ def getCandidateNumber(answerSheetImage):
 
         cnts = contours.sort_contours(questionCnts[i:i + 10], method="top-to-bottom")[0]
         bubbled = None
-        
+        numOfBubbled = 0
         for j, c in enumerate(cnts):
             mask = np.zeros(cropped_thresh.shape, dtype="uint8")
             cv2.drawContours(mask, [c], -1, 255, -1)
@@ -186,22 +189,34 @@ def getCandidateNumber(answerSheetImage):
 
             if bubbled is None or total > bubbled[0]:
                 bubbled = (total, j)
-        candidateNumber += str(bubbled[1])
+            if total > FILLED_THRESHOLD_2:
+                numOfBubbled += 1
+
+        if bubbled[0] < FILLED_THRESHOLD_2 or numOfBubbled > 1:
+            print("INVALID CANDIDATE NUMBER FILLED")
+            return None
+        else:
+            candidateNumber += str(bubbled[1])
 
     return candidateNumber
 
 def calculateGrade(answerList, answerKeys, testCode):
-    correctAnswerList = []
-    wrongAnswerList = []
-    for index, key in enumerate(answerKeys[testCode]):
-        # if answerList[index] == -1:
-        #     wrongAnswerList.append(index)
-        if answerList[index] == key:
-            correctAnswerList.append(index)
-        else:
-            wrongAnswerList.append(index)
-    grade = round((len(correctAnswerList) / float(len(answerKeys[testCode]))) * 10, 2)
-    return grade
+    if testCode == "N/A":
+        print("INVALID TEST CODE, CANNOT GRADE SHEET")
+        return 0
+    else:
+        correctAnswerList = []
+        wrongAnswerList = []
+        for index, key in enumerate(answerKeys[testCode]):
+            # if answerList[index] == -1:
+            #     wrongAnswerList.append(index)
+            if answerList[index] == key:
+                correctAnswerList.append(index)
+            else:
+                wrongAnswerList.append(index)
+        grade = round((len(correctAnswerList) / float(len(answerKeys[testCode]))) * 10, 2)
+        gradeInfo = [grade, correctAnswerList, wrongAnswerList]
+        return gradeInfo
 
 def getAnswerArea(img):
     imgContours = img.copy()
@@ -237,9 +252,18 @@ def process(img, answerKeys, gradedAnswerSheets):
     answerList = getAnswerList(answerArea)
     candidateNumber = getCandidateNumber(img)
     testCode = getTestCode(img)
-    grade = calculateGrade(answerList, answerKeys, testCode)
-    print("Candidate number: " + candidateNumber)
-    print("Test code: " + testCode)
+    if candidateNumber is None:
+        candidateNumber = "N/A"
+    if testCode is None:
+        testCode = "N/A"
+    
+    gradeInfo = calculateGrade(answerList, answerKeys, testCode)
+    grade = gradeInfo[0]
+    correctAnswerList = gradeInfo[1]
+    wrongAnswerList = gradeInfo[2]
+
+    print("Candidate number: " + str(candidateNumber))
+    print("Test code: " + str(testCode))
     print("Grade: " + str(grade))
     print("Answer list: ", answerList)
 
@@ -247,7 +271,7 @@ def process(img, answerKeys, gradedAnswerSheets):
     resultImage = img
 
     # Create new object of class GradedAnswerSheet having the above info
-    gradedAnswerSheet = GradedAnswerSheet(candidateNumber, testCode, grade, resultImage, answerList)
+    gradedAnswerSheet = GradedAnswerSheet(candidateNumber, testCode, grade, resultImage, answerList, wrongAnswerList, correctAnswerList)
     gradedAnswerSheets.append(gradedAnswerSheet)
 
     return resultImage
