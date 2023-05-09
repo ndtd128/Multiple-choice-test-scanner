@@ -46,7 +46,7 @@ def stack_images(scale, img_array):
     return ver
 
 
-def rect_contour(contours):
+def rect_contour(contours, areaFilter=0, approxPoly=0.01):
     rectCon = []
 
     for contour in contours:
@@ -54,23 +54,31 @@ def rect_contour(contours):
         # print("Area ", area)
 
         # Filter by area
-        if area > 1000:
+        if area > areaFilter:
             peri = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
+            approx = cv2.approxPolyDP(contour, approxPoly * peri, True)
 
             if len(approx) == 4:
-                check = True
-                for cnt in rectCon:
-                    rate = cv2.matchShapes(contour, cnt, cv2.CONTOURS_MATCH_I1, 0.0)
-                    if rate < 0.05:
-                        check = False
-                        break
-                if check:
+                # check = True
+                # for cnt in rectCon:
+                #     rate = cv2.matchShapes(contour, cnt, cv2.CONTOURS_MATCH_I1, 0.0)
+                #     if rate < 0.05:
+                #         check = False
+                #         break
+                # if check:
                     rectCon.append(contour)
 
     # sort descending rectangle contours by area
     rectCon = sorted(rectCon, key=cv2.contourArea, reverse=True)
-    return rectCon
+
+    uniqueRectCon = []
+    uniqueRectCon.append(rectCon[0])
+    for i in range(1, len(rectCon)):
+        if cv2.contourArea(rectCon[i]) / cv2.contourArea(rectCon[i - 1]) > 1.05 or cv2.contourArea(
+                rectCon[i]) / cv2.contourArea(rectCon[i - 1]) < 0.95:
+            uniqueRectCon.append(rectCon[i])
+
+    return uniqueRectCon
 
 
 def get_corner_points(contour):

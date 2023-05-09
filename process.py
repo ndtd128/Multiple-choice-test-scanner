@@ -5,9 +5,43 @@ from utils import *
 from GradedAnswerSheet import *
 from imutils import contours as ct
 import imutils
+from imutils.perspective import four_point_transform
 
 height = 840
 width = 615
+
+
+def scan_answer_sheet(img):
+    # prep
+    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
+    imgCanny = cv2.Canny(imgBlur, 20, 50)
+
+    # find sheet's contour
+    contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+
+    # sheetCnt = None
+    #
+    # for contour in contours:
+    #     peri = cv2.arcLength(contour, True)
+    #     approx = cv2.approxPolyDP(contour, 0.02*peri, True)
+    #
+    #     if len(approx) == 4:
+    #         sheetCnt = approx
+    #         break
+    #
+    # # apply perspective transform
+    # scannedSheet = four_point_transform(img, sheetCnt.reshape(4, 2))
+
+    # testing the output, MUST COMMENT IN FINAL
+    imgArray = [img, imgCanny]
+    # imgArray = [img, scannedSheet]
+    imgStack = stack_images(0.5, imgArray)
+    cv2.imshow("warp", imgStack)
+    cv2.waitKey(0)
+
+    return scannedSheet
 
 
 def preprocess(img):
@@ -27,7 +61,7 @@ def preprocess(img):
 
     getCandNum(img)
     # Find rects
-    rectCon = rect_contour(contours)
+    rectCon = rect_contour(contours, 1000)
     # for cnt in rectCon:
     color = list(np.random.random(size=3) * 256)
     imgRectCon = cv2.drawContours(imgRectCon, rectCon[3], -1, color, 10)
@@ -40,7 +74,6 @@ def preprocess(img):
 
 
 def getCandNum(img):
-
     imgContours = img.copy()
     imgRectCon = img.copy()
     imgSelectedCon = img.copy()
@@ -53,7 +86,7 @@ def getCandNum(img):
     imgContours = cv2.drawContours(imgContours, contours, -1, (0, 255, 0)[::-1], 1)
 
     # Find rects
-    rectCon = rect_contour(contours)
+    rectCon = rect_contour(contours, 1000)
     contour1 = get_corner_points(rectCon[3])
     # contour2 = get_corner_points(rectCon[1])
     # contour3 = get_corner_points(rectCon[2])
@@ -131,8 +164,10 @@ def getCandNum(img):
     print(cand_num)
     return
 
+
 def process(img, gradedAnswerSheets):
-    preprocess(img)
+    scannedSheet = scan_answer_sheet(img)
+    # preprocess(img)
 
     # TODO: Process image and get candidate number, test code, score and result image
     candidateNumber = None
