@@ -4,8 +4,9 @@ import math
 from constants import *
 import imutils
 from imutils.perspective import four_point_transform
-
+SIMILAR_RATE = 0.002
 def stackImages(scale, img_array):
+
     rows = len(img_array)
     cols = len(img_array[0])
     rowsAvailable = isinstance(img_array[0], list)  
@@ -49,17 +50,27 @@ def stackImages(scale, img_array):
     return ver
 
 
-def rectContour(contours):
+def rectContour(contours, areaFilter=0, approxPoly=0.01):
     rectCon = []
 
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area > 1000:
+        # print("Area ", area)
+
+        # Filter by area
+        if area > areaFilter:
             peri = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
+            approx = cv2.approxPolyDP(contour, approxPoly * peri, True)
 
             if len(approx) == 4:
-                rectCon.append(contour)
+                # check = True
+                # for cnt in rectCon:
+                #     rate = cv2.matchShapes(contour, cnt, cv2.CONTOURS_MATCH_I1, 0.0)
+                #     if rate < 0.05:
+                #         check = False
+                #         break
+                # if check:
+                    rectCon.append(contour)
 
     # Sort descending rectangle contours by area
     rectCon = sorted(rectCon, key=cv2.contourArea, reverse=True)
@@ -79,14 +90,14 @@ def getCornerPoints(contour):
 
 # Deprecated
 def reorder(myPoints):
-    myPoints = myPoints.reshape((4,2))
-    myPointNew= np.zeros((4,1,2),np.int32)
+    myPoints = myPoints.reshape((4, 2))
+    myPointNew = np.zeros((4, 1, 2), np.int32)
     add = myPoints.sum(1)
     # print(myPoints)
     # print(add)
-    myPointNew[0]  = myPoints[np.argmin(add)] # [0,0]
-    myPointNew[3] = myPoints[np.argmax(add)]   #[w,h]
-    diff = np.diff(myPoints,axis=1)
+    myPointNew[0] = myPoints[np.argmin(add)]  # [0,0]
+    myPointNew[3] = myPoints[np.argmax(add)]  # [w,h]
+    diff = np.diff(myPoints, axis=1)
     myPointNew[1] = myPoints[np.argmin(diff)]  # [w,0]
     myPointNew[2] = myPoints[np.argmax(diff)]  # [h,0]
     return myPointNew
@@ -105,7 +116,8 @@ def numberDetection(img):
 
     # Perform dilation on the image
     dilated = cv2.dilate(imgCanny, kernel, iterations=1)
-    cv2.imshow("A",dilated)
+    cv2.imshow("A", dilated)
+
 
 def extractAnswerColumns(answerRegion):
     # Load the image
