@@ -10,8 +10,8 @@ answerSheetPath = 'answerSheets'
 answerKeyPath = 'answerKeys'
 
 # Path to result folder (= name of test) (sau nay se lay input nguoi dung)
-# testName = input("Test name: ").trim()
-testName = "midterm"
+testName = input("Test name: ").strip()
+# testName = "midterm"
 
 
 # Create result folder if not yet existed
