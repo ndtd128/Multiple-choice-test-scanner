@@ -70,7 +70,7 @@ def rectContour(contours, areaFilter=0, approxPoly=0.01):
                 #         check = False
                 #         break
                 # if check:
-                    rectCon.append(contour)
+                rectCon.append(contour)
 
     # Sort descending rectangle contours by area
     rectCon = sorted(rectCon, key=cv2.contourArea, reverse=True)

@@ -18,12 +18,10 @@ def makeAnswerKeyListFromCSV(csvFilePath, answerKeys):
                 key = ord(row[1]) - 65
                 answerKeys[testCode].append(key)
 
-import statistics
-
 def createCSVReport(gradedAnswerSheets, testName):
     testResults = {}
     for index, sheet in enumerate(gradedAnswerSheets):
-        if sheet.testCode != "N/A" and sheet.testCode not in testResults:
+        if sheet.testCode != "NA" and sheet.testCode not in testResults:
             testResults[sheet.testCode] = []
             testResults[sheet.testCode].append((sheet.candidateNumber, sheet.score))
 

@@ -49,14 +49,16 @@ def getAnswerList(answerArea):
                 answerList.append(bubbled[1])
     
     return answerList
+
 def scan_answer_sheet(img):
     # prep
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
-    imgCanny = cv2.Canny(imgBlur, 20, 50)
-
+    imgBlur = cv2.GaussianBlur(imgGray, (5, 5), 0)
+    imgCanny = cv2.Canny(imgBlur, 75, 200)
+    # kernel = np.ones((3,3),np.uint8)
+    # imgOpened = cv2.dilate(imgCanny,kernel,iterations = 1)
     # find sheet's contour
-    contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
     sheetCnt = None
@@ -71,13 +73,13 @@ def scan_answer_sheet(img):
     
     # apply perspective transform
     scannedSheet = four_point_transform(img, sheetCnt.reshape(4, 2))
-
+    scannedSheet = cv2.resize(scannedSheet, (WIDTH, HEIGHT))
     # testing the output, MUST COMMENT IN FINAL
-    imgArray = [img, imgCanny]
+    # imgArray = [img, imgCanny, scannedSheet]
     # imgArray = [img, scannedSheet]
-    imgStack = stackImages(0.5, imgArray)
-    cv2.imshow("warp", imgStack)
-    cv2.waitKey(0)
+    # imgStack = stackImages(0.3, imgArray)
+    # cv2.imshow("warp", imgStack)
+    # cv2.waitKey(0)
 
     return scannedSheet
 
@@ -128,15 +130,18 @@ def getTestCode(answerSheetImage):
 
 def getCandidateNumber(answerSheetImage):
     answerSheetInfo = getAnswerSheetInfo(answerSheetImage)
+    # print(answerSheetInfo)
     candidateNumberArea= answerSheetInfo["candidateNumber"]
     imgWarpgray = cv2.cvtColor(candidateNumberArea, cv2.COLOR_BGR2GRAY)
-
+    # cv2.imshow("SBD", answerSheetInfo["infoImage"])
+    cv2.waitKey(0)
     thresh = cv2.threshold(imgWarpgray, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
     threshH, threshW = thresh.shape[:2]
     crop_width = int(0.825 * threshW)
     crop_height = int(0.1 * threshH)
     cropped_thresh = thresh[crop_height:threshH-crop_height, threshW - crop_width:]
-
+    # showImage("SBD", cropped_thresh, 0.6)
+    
     candidateNumber = ""
     questionCnts = getBubbles(cropped_thresh)
     cv2.drawContours(cropped_thresh, questionCnts, -1, (0, 255, 0)[::-1], 10)
@@ -167,9 +172,9 @@ def getCandidateNumber(answerSheetImage):
     return candidateNumber
 
 def calculateGrade(answerList, answerKeys, testCode):
-    if testCode == "N/A":
+    if testCode == "NA" or testCode not in answerKeys:
         print("INVALID TEST CODE, CANNOT GRADE SHEET")
-        return 0
+        return [0, answerKeys, answerKeys]
     else:
         correctAnswerList = []
         wrongAnswerList = []
@@ -195,87 +200,94 @@ def getAnswerArea(img):
     # Finding all contours
     contours1, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     imgContours = cv2.drawContours(imgContours, contours1, -1, (0, 255, 0)[::-1], 1)
-    showImage("Answer Area", imgContours, 0.3)
+    # showImage("Answer Area 1", imgContours, 0.3)
     # Find rects
-    rectCon = rectContour(contours1)
+    rectCon = rectContour(contours1, 1000, 0.01)
 
     answerAreaCorners = getCornerPoints(rectCon[1])
 
     cv2.drawContours(imgSelectedCon, answerAreaCorners, -1, (0, 255, 0)[::-1], 10)
-    showImage("Answer Area", imgSelectedCon, 0.3)
+    # showImage("Answer Area 2", imgSelectedCon, 0.3)
     imgWarpColored = four_point_transform(img, answerAreaCorners.reshape(4, 2))
 
     # imgArray = [imgContours, imgSelectedCon, imgWarpColored]
     # imgStack = stackImages(0.3, imgArray)
     # cv2.imshow("stacked image", imgStack)
     # cv2.waitKey(0)
-    showImage("Answer Area", imgWarpColored, 0.6)
+    # showImage("Answer Area chuan", imgWarpColored, 0.6)
     return imgWarpColored
 
 def getResult(answerArea, answerKeys, testCode, answerList, grade ,img):
-    count = 0
+    checkBlankAnswerList = False
+    countBlankAnswer = 0
+    for answer in answerList:
+        if answer == -1:
+            countBlankAnswer += 1
+    if countBlankAnswer == len(answerList):
+        checkBlankAnswerList = True
+    if testCode != "NA" and checkBlankAnswerList==False:
+        count = 0
+        #Find answer area and store its location
+        location_info = []
+        answerColumns = extractAnswerColumns(answerArea)
+        for columnIndex, column in enumerate(answerColumns):
+            w = column.shape[1]
+            h = column.shape[0]
+            res = cv2.matchTemplate(img, column, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            top_left = max_loc
+            location_info.append([top_left[1], top_left[1] + h, top_left[0], top_left[0] + w])
+            # print(location_info[columnIndex])
 
-    #Find answer area and store its location
-    location_info = []
-    answerColumns = extractAnswerColumns(answerArea)
-    for columnIndex, column in enumerate(answerColumns):
-        w = column.shape[1]
-        h = column.shape[0]
-        res = cv2.matchTemplate(img, column, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        top_left = max_loc
-        location_info.append([top_left[1], top_left[1] + h, top_left[0], top_left[0] + w])
-        # print(location_info[columnIndex])
+        imgWarpgray = cv2.cvtColor(answerArea, cv2.COLOR_BGR2GRAY)
 
-    imgWarpgray = cv2.cvtColor(answerArea, cv2.COLOR_BGR2GRAY)
+        thresh = cv2.threshold(imgWarpgray, 0, 255,
+                            cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 
-    thresh = cv2.threshold(imgWarpgray, 0, 255,
-                           cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+        answerColumns = extractAnswerColumns(thresh)
+        for columnIndex, column in enumerate(answerColumns):
+            cnts = cv2.findContours(column, cv2.RETR_LIST,
+                                    cv2.CHAIN_APPROX_SIMPLE)
+            cnts = imutils.grab_contours(cnts)
+            questionCnts = []
+            for c in cnts:
+                (x, y, w, h) = cv2.boundingRect(c)
+                ar = w / float(h)
 
-    answerColumns = extractAnswerColumns(thresh)
-    for columnIndex, column in enumerate(answerColumns):
-        cnts = cv2.findContours(column, cv2.RETR_LIST,
-                                cv2.CHAIN_APPROX_SIMPLE)
-        cnts = imutils.grab_contours(cnts)
-        questionCnts = []
-        for c in cnts:
-            (x, y, w, h) = cv2.boundingRect(c)
-            ar = w / float(h)
+                if w >= 20 and h >= 20  and ar >= 0.7 and ar <= 1.3:
+                    # Check if the contour overlaps with any existing contour
+                    is_overlapping = False
+                    (curr_x, curr_y), curr_radius = cv2.minEnclosingCircle(c)
+                    for existingCnt in questionCnts:
+                        (existing_x, existing_y), existing_radius = cv2.minEnclosingCircle(existingCnt)
+                        distance = np.sqrt((existing_x - curr_x)**2 + (existing_y - curr_y)**2)
+                        if distance < (existing_radius + curr_radius):
+                            is_overlapping = True
+                            break
 
-            if w >= 20 and h >= 20  and ar >= 0.7 and ar <= 1.3:
-                # Check if the contour overlaps with any existing contour
-                is_overlapping = False
-                (curr_x, curr_y), curr_radius = cv2.minEnclosingCircle(c)
-                for existingCnt in questionCnts:
-                    (existing_x, existing_y), existing_radius = cv2.minEnclosingCircle(existingCnt)
-                    distance = np.sqrt((existing_x - curr_x)**2 + (existing_y - curr_y)**2)
-                    if distance < (existing_radius + curr_radius):
-                        is_overlapping = True
-                        break
+                    # If the contour is not overlapping with any existing contour, add it to questionCnts
+                    if not is_overlapping:
+                        questionCnts.append(c)
+                        
+            questionCnts = imutils.contours.sort_contours(questionCnts, method="top-to-bottom")[0]
 
-                # If the contour is not overlapping with any existing contour, add it to questionCnts
-                if not is_overlapping:
-                    questionCnts.append(c)
-                    
-        questionCnts = imutils.contours.sort_contours(questionCnts, method="top-to-bottom")[0]
-
-        #Fill answers with color
-        #Green: Key answer
-        #Red: False answer
-        #Blue: No answer
-        for (q, i) in enumerate(np.arange(0, len(questionCnts), 4)):
-            cnts = contours.sort_contours(questionCnts[i:i + 4])[0]
-            cv2.drawContours(img[location_info[columnIndex][0]:location_info[columnIndex][1], location_info[columnIndex][2]:location_info[columnIndex][3]], 
-                             cnts, answerKeys[testCode][count], color=(50, 193, 99), thickness=cv2.FILLED)
-            if (answerList[count] != answerKeys[testCode][count] and answerList[count] != -1):
+            #Fill answers with color
+            #Green: Key answer
+            #Red: False answer
+            #Blue: No answer
+            for (q, i) in enumerate(np.arange(0, len(questionCnts), 4)):
+                cnts = contours.sort_contours(questionCnts[i:i + 4])[0]
                 cv2.drawContours(img[location_info[columnIndex][0]:location_info[columnIndex][1], location_info[columnIndex][2]:location_info[columnIndex][3]], 
-                             cnts, answerList[count], color=(80,127,255), thickness=cv2.FILLED)
-            elif (answerList[count] == -1):
-                cv2.drawContours(img[location_info[columnIndex][0]:location_info[columnIndex][1], location_info[columnIndex][2]:location_info[columnIndex][3]], 
-                             cnts, answerKeys[testCode][count], color=(208,224,64), thickness=cv2.FILLED)
-            count += 1
+                                cnts, answerKeys[testCode][count], color=(50, 193, 99), thickness=cv2.FILLED)
+                if (answerList[count] != answerKeys[testCode][count] and answerList[count] != -1):
+                    cv2.drawContours(img[location_info[columnIndex][0]:location_info[columnIndex][1], location_info[columnIndex][2]:location_info[columnIndex][3]], 
+                                cnts, answerList[count], color=(80,127,255), thickness=cv2.FILLED)
+                elif (answerList[count] == -1):
+                    cv2.drawContours(img[location_info[columnIndex][0]:location_info[columnIndex][1], location_info[columnIndex][2]:location_info[columnIndex][3]], 
+                                cnts, answerKeys[testCode][count], color=(208,224,64), thickness=cv2.FILLED)
+                count += 1
 
-        cv2.putText(img[SCORE_Y + round(SCORE_H/12):SCORE_Y+SCORE_H, SCORE_X:SCORE_X+SCORE_W], str(grade), (50,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(img[SCORE_Y + round(SCORE_H/12):SCORE_Y+SCORE_H, SCORE_X:SCORE_X+SCORE_W], str(grade), (50,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         
     # cv2.imshow("filled", img)
     # cv2.waitKey()
@@ -288,9 +300,9 @@ def process(img, answerKeys, gradedAnswerSheets):
     candidateNumber = getCandidateNumber(img)
     testCode = getTestCode(img)
     if candidateNumber is None:
-        candidateNumber = "N/A"
+        candidateNumber = "NA"
     if testCode is None:
-        testCode = "N/A"
+        testCode = "NA"
     
     gradeInfo = calculateGrade(answerList, answerKeys, testCode)
     grade = gradeInfo[0]
