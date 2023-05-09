@@ -163,21 +163,21 @@ def getAnswerArea(img):
     # Finding all contours
     contours1, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     imgContours = cv2.drawContours(imgContours, contours1, -1, (0, 255, 0)[::-1], 1)
-
+    showImage("Answer Area", imgContours, 0.3)
     # Find rects
     rectCon = rectContour(contours1)
 
     answerAreaCorners = getCornerPoints(rectCon[1])
 
     cv2.drawContours(imgSelectedCon, answerAreaCorners, -1, (0, 255, 0)[::-1], 10)
-
+    showImage("Answer Area", imgSelectedCon, 0.3)
     imgWarpColored = four_point_transform(img, answerAreaCorners.reshape(4, 2))
 
     # imgArray = [imgContours, imgSelectedCon, imgWarpColored]
     # imgStack = stackImages(0.3, imgArray)
     # cv2.imshow("stacked image", imgStack)
     # cv2.waitKey(0)
-
+    showImage("Answer Area", imgWarpColored, 0.6)
     return imgWarpColored
 
 def getResult(answerArea, answerKeys, testCode, answerList, grade ,img):

@@ -192,3 +192,11 @@ def getBubbles(thresholdedImage):
             if not is_overlapping:
                 questionCnts.append(c)
     return questionCnts
+
+def showImage(name, img, scale):
+    original_height, original_width = img.shape[:2]
+    new_width = int(original_width * scale)
+    new_height = int(original_height * scale)
+    resized_image = cv2.resize(img, (new_width, new_height))
+    cv2.imshow(name, resized_image)
+    cv2.waitKey(0)
