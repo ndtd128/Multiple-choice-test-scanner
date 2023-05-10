@@ -13,12 +13,17 @@ def getAnswerList(answerArea):
 
     thresh = cv2.threshold(imgWarpgray, 0, 255,
                            cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+    # cv2.imshow("col", thresh)
+    # cv2.waitKey(0)
     answerList = []
     answerColumns = extractAnswerColumns(thresh)
     for columnIndex, column in enumerate(answerColumns):
         questionCnts = getBubbles(column)
         questionCnts = imutils.contours.sort_contours(questionCnts, method="top-to-bottom")[0]
 
+        # cv2.drawContours(column, questionCnts, -1, (0, 255, 0)[::-1], 10)
+        # cv2.imshow("col", column)
+        # cv2.waitKey(0)
         for (q, i) in enumerate(np.arange(0, len(questionCnts), 4)):
             cnts = contours.sort_contours(questionCnts[i:i + 4])[0]
             bubbled = None
@@ -28,7 +33,7 @@ def getAnswerList(answerArea):
                 # "bubble" for the question
                 mask = np.zeros(column.shape, dtype="uint8")
                 cv2.drawContours(mask, [c], -1, 255, -1)
-        
+
                 # apply the mask to the thresholded image, then
                 # count the number of non-zero pixels in the
                 # bubble area
@@ -39,6 +44,7 @@ def getAnswerList(answerArea):
                 # if the current total has a larger number of total
                 # non-zero pixels, then we are examining the currently
                 # bubbled-in answer
+                # print(total)
                 if bubbled is None or total > bubbled[0]:
                     bubbled = (total, j)
                 if total > FILLED_THRESHOLD:
@@ -53,10 +59,10 @@ def getAnswerList(answerArea):
 def scan_answer_sheet(img):
     # prep
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    imgBlur = cv2.GaussianBlur(imgGray, (5, 5), 0)
+    imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 0)
     imgCanny = cv2.Canny(imgBlur, 75, 200)
-    # kernel = np.ones((3,3),np.uint8)
-    # imgOpened = cv2.dilate(imgCanny,kernel,iterations = 1)
+    kernel = np.ones((5,5),np.uint8)
+    imgCanny = cv2.dilate(imgCanny,kernel,iterations = 1)
     # find sheet's contour
     contours, hierarchy = cv2.findContours(imgCanny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
@@ -76,10 +82,14 @@ def scan_answer_sheet(img):
     scannedSheet = cv2.resize(scannedSheet, (WIDTH, HEIGHT))
     # testing the output, MUST COMMENT IN FINAL
     # imgArray = [img, imgCanny, scannedSheet]
-    # imgArray = [img, scannedSheet]
+    # # imgArray = [img, scannedSheet]
     # imgStack = stackImages(0.3, imgArray)
     # cv2.imshow("warp", imgStack)
     # cv2.waitKey(0)
+    border_pixels = 10
+
+    # Crop the image
+    scannedSheet = scannedSheet[border_pixels:HEIGHT-border_pixels, border_pixels:WIDTH-border_pixels]
 
     return scannedSheet
 
@@ -97,7 +107,11 @@ def getTestCode(answerSheetImage):
     crop_height = int(0.1 * threshH)
 
     cropped_thresh = thresh[crop_height:, crop_width:]
-
+    # imgArray = [testCodeArea]
+    # # imgArray = [img, scannedSheet]
+    # imgStack = stackImages(0.3, imgArray)
+    # cv2.imshow("warp", imgStack)
+    # cv2.waitKey(0)
     testCode = ""
     questionCnts = getBubbles(cropped_thresh)
     cv2.drawContours(cropped_thresh, questionCnts, -1, (0, 255, 0)[::-1], 10)
@@ -196,17 +210,23 @@ def getAnswerArea(img):
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
     imgCanny = cv2.Canny(imgBlur, 20, 50)
-
+    kernel = np.ones((5,5),np.uint8)
+    imgCanny = cv2.dilate(imgCanny,kernel,iterations = 1)
+    # imgArray = [img, imgCanny]
+    # # imgArray = [img, scannedSheet]
+    # imgStack = stackImages(0.3, imgArray)
+    # cv2.imshow("warp", imgStack)
+    # cv2.waitKey(0)
     # Finding all contours
     contours1, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    imgContours = cv2.drawContours(imgContours, contours1, -1, (0, 255, 0)[::-1], 1)
+    
+    imgContours = cv2.drawContours(imgContours, contours1, -1, (0, 255, 0)[::-1], 5)
     # showImage("Answer Area 1", imgContours, 0.3)
     # Find rects
     rectCon = rectContour(contours1, 1000, 0.01)
-
     answerAreaCorners = getCornerPoints(rectCon[1])
 
-    cv2.drawContours(imgSelectedCon, answerAreaCorners, -1, (0, 255, 0)[::-1], 10)
+    cv2.drawContours(imgSelectedCon, answerAreaCorners, -1, (0, 255, 0)[::-1], 30)
     # showImage("Answer Area 2", imgSelectedCon, 0.3)
     imgWarpColored = four_point_transform(img, answerAreaCorners.reshape(4, 2))
 
@@ -214,7 +234,8 @@ def getAnswerArea(img):
     # imgStack = stackImages(0.3, imgArray)
     # cv2.imshow("stacked image", imgStack)
     # cv2.waitKey(0)
-    # showImage("Answer Area chuan", imgWarpColored, 0.6)
+    # showImage("Answer Area chuan", answerAreaCorners, 0.6)
+
     return imgWarpColored
 
 def getResult(answerArea, answerKeys, testCode, answerList, grade ,img):
@@ -297,11 +318,13 @@ def process(img, answerKeys, gradedAnswerSheets):
     img = scan_answer_sheet(img)
     answerArea = getAnswerArea(img)
     answerList = getAnswerList(answerArea)
+    print("Answer list: ", len(answerList))
+    print("Answer list: ", answerList)
     candidateNumber = getCandidateNumber(img)
     testCode = getTestCode(img)
     if candidateNumber is None:
         candidateNumber = "NA"
-    if testCode is None:
+    if testCode is None or testCode not in answerKeys:
         testCode = "NA"
     
     gradeInfo = calculateGrade(answerList, answerKeys, testCode)
@@ -312,7 +335,7 @@ def process(img, answerKeys, gradedAnswerSheets):
     print("Candidate number: " + str(candidateNumber))
     print("Test code: " + str(testCode))
     print("Grade: " + str(grade))
-    print("Answer list: ", answerList)
+    
 
     resultImage = getResult(answerArea, answerKeys, testCode, answerList, grade, img.copy())
 

@@ -165,10 +165,27 @@ def getAnswerSheetInfo(answerSheetImage):
     answerSheetInfo = {}
 
     imgGray = cv2.cvtColor(info, cv2.COLOR_BGR2GRAY)
-    imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
-    imgCanny = cv2.Canny(imgBlur, 20, 50)
+    # imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 1)
+    # imgCanny = cv2.Canny(imgBlur, 20, 50)
+    # kernel = np.ones((3,3),np.uint8)
+    # imgCanny = cv2.morphologyEx(imgCanny, cv2.MORPH_CLOSE, kernel)
+    # imgCanny = cv2.dilate(imgCanny,kernel,iterations = 1)
+    # imgCanny = cv2.erode(imgCanny,kernel,iterations = 1)
 
+    imgBlur = cv2.GaussianBlur(imgGray, (3, 3), 0)  # Adjust the blur parameters if needed
+    imgThreshold = cv2.threshold(imgBlur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+
+    kernel = np.ones((3, 3), np.uint8)
+    imgClosed = cv2.morphologyEx(imgThreshold, cv2.MORPH_CLOSE, kernel, iterations=1)
+    imgDilated = cv2.dilate(imgClosed, kernel, iterations=1)
+    imgCanny = cv2.erode(imgDilated, kernel, iterations=1)
     contours1, hierarchy = cv2.findContours(imgCanny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # imgArray = [info, imgCanny]    
+    # imgArray = [img, scannedSheet]
+    # imgStack = stackImages(0.3, imgArray)
+    # cv2.imshow("warp", imgStack)
+    # cv2.waitKey(0)
     rectCon = rectContour(contours1)
 
     candNumberCorners = getCornerPoints(rectCon[0])

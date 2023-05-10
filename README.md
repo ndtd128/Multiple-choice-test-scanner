@@ -13,3 +13,6 @@ python main.py
 
 ## Technology
 Python and openCV
+
+## Method explanation
+Slide: [Link](https://docs.google.com/presentation/u/1/d/1zOAIP-dW7aVNi6MbtD6Li-S6tQN2YkcJ/edit)

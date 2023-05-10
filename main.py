@@ -45,6 +45,6 @@ for img in answerSheetsImages:
 for i in range(len(gradedAnswerSheets)):
     outputPath = os.path.join(resultFolder, f'{gradedAnswerSheets[i].candidateNumber}.jpg')
     cv2.imwrite(outputPath, gradedAnswerSheets[i].resultImage)
-
+print("Graded " + str(len(gradedAnswerSheets)) + " answer sheets successfully")
 # Create CSV report
 csvUtils.createCSVReport(gradedAnswerSheets, testName)
